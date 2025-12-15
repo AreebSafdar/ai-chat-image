@@ -1,14 +1,21 @@
-import { OpenAI } from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req) {
   const { messages } = await req.json();
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages,
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "gpt-4o-mini", messages }),
   });
 
-  return new Response(JSON.stringify({ reply: response.choices[0].message.content }));
+  if (!res.ok) {
+    const errText = await res.text();
+    return new Response(errText, { status: res.status });
+  }
+
+  const data = await res.json();
+  const reply = data?.choices?.[0]?.message?.content ?? "";
+  return new Response(JSON.stringify({ reply }), { headers: { "Content-Type": "application/json" } });
 }
